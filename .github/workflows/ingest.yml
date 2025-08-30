@@ -2,6 +2,12 @@ name: Ingest log
 on:
   repository_dispatch:
     types: [log_event]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: JSON string payload to append
+        required: false
+        default: '{}'
 permissions:
   contents: write
 jobs:
@@ -12,10 +18,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Append entry
+      - name: Append entry (repository_dispatch)
+        if: github.event_name == 'repository_dispatch'
         run: node scripts/append-log.js
         env:
           PAYLOAD: ${{ toJson(github.event.client_payload) }}
+      - name: Append entry (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/append-log.js
+        env:
+          PAYLOAD: ${{ inputs.payload }}
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
